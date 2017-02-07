@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="X-UA-Compatible" content="IE=10">
+<meta charset="utf-8">
+<link rel="stylesheet" href="script/bootstrap.css" type="text/css">
+<link rel="stylesheet" href="script/font-awesome.min.css" type="text/css">
+
+<link rel="stylesheet" href="script/textAngular.css" type="text/css">
+
+<!--<script src="script/jq.js"></script>-->
+
+
+    <style>body,#topmenu{background: #F1F1F1}
+
+.text-red {
+    color:#E52A3A;
+}
+
+.text-gray {
+    color:#5f5f5f;
+}
+
+.text-center {
+    text-align: center;
+}
+
+
+.ta-toolbar {
+    background-color: #F0F0F0;
+    padding: 0px 10px 5px;
+    margin-left: 0px; /* Override bootstrap */
+    border: 1px solid #EEE;
+}
+
+.ta-toolbar .btn-group {
+    margin-bottom: 5px;
+}
+
+.ta-editor, .white-box {
+    padding: 10px;
+    background-color: #FFF;
+    border: 1px solid #EEE;
+}
+
+#editorcontroller div.ta-bind{
+    border: 1px solid #d9d9d9;
+
+}
+
+textarea.ta-bind {
+    width: 100%;
+}
+
+#topmenu{position: fixed;width:100%;padding: 10px 10px 5px 10px;top:0;}
+
+
+.mobileshow{display: none!important}
+
+@media only screen and (max-device-width: 736px) 
+{
+.mobileshow{display: initial!important}
+.mobilehide{display: none!important}
+
+}
+.mobileforceshow{display: initial!important}
+
+    </style>
+</head>
+<body ng-app='sb233editor'>
+<div ng-controller='editorcontroller' id='editorcontroller'>
+    <div id='topmenu'>
+     <button type="button" class="btn btn-default mobileshow ng-class:{'focus':toolbarshowfocus}" ng-click='toolbarshowfocus=!toolbarshowfocus;seteditortopmargin()'> <i class="fa fa-align-justify" aria-hidden="true"></i></button>
+<button type="button" class="btn btn-default mobileshow  ng-class:{'mobilehide':toolbarshowfocus}" ng-click='submit()' >Submit</button><button type="button" class="btn btn-default mobileshow  ng-class:{'mobilehide':toolbarshowfocus}" ng-click='close()' >Close</button>
+<div text-angular-toolbar ta-toolbar="[['h1','h2','h3','p', 'pre','quote'],['underline','strikeThrough','bold','italics','ul','ol'],['undo','redo','clear','justifyLeft','justifyCenter','justifyRight','justifyFull','indent','outdent','html','insertImage','insertLink'],['wordcount','charcount','close','submit']]" name="sb233toolbar" class="mobilehide ng-class:{'mobileforceshow':toolbarshowfocus}"></div>
+    </div>
+
+
+<div text-angular ng-model="htmlcontent" style='margin-top:{{editortopmargin}}px' name="sb233editor" ta-text-editor-class="clearfix border-around"  ta-target-toolbars='sb233toolbar' ta-html-editor-class="border-around"></div>
+</div>
+
+<script src="script/angular.min.js"></script>
+
+<script src='script/textAngular-rangy.min.js'></script>
+    
+      <script src='script/textAngular-sanitize.min.js'></script>
+    
+      <script src='script/textAngular.min.js'></script>
+
+
+<script type="text/javascript">
+    angular.module("sb233editor", ['textAngular']).config(function($provide){
+    $provide.decorator('taOptions', ['taRegisterTool', '$delegate', function(taRegisterTool, taOptions){
+        taRegisterTool('submit', {
+            buttontext:'Submit',
+            action: function(){
+               angular.element(document.getElementById('editorcontroller')).scope().submit()
+            }
+        });
+        taRegisterTool('close', {
+            buttontext:'Close',
+            action: function(){
+               angular.element(document.getElementById('editorcontroller')).scope().close()
+            }
+        });
+        taOptions.toolbar[3].push('submit');
+        return taOptions;
+    }]);
+})
+        .controller('editorcontroller', ['$scope', 'textAngularManager','$timeout', function ($scope, textAngularManager,$timeout) {
+
+            $scope.toolbarshowfocus=false;
+$scope.seteditortopmargin=function(){$timeout(function(){$scope.editortopmargin=document.getElementById('topmenu').offsetHeight},1)}
+            $scope.setori=function(ahaha){$scope.htmlcontent=ahaha; textAngularManager.refreshEditor()}
+
+           
+         $scope.parentscope= window.parent.window.angular.element(window.parent.document.getElementById('sidemenu')).scope();
+         if(typeof($scope.parentscope)=='object'){
+
+            $scope.htmlcontent =$scope.parentscope.edittextdata;
+          //  $scope.disabled = false;
+          $scope.close=function(){if(confirm('Quit Editing?')) $scope.parentscope.hidemask()}
+            $scope.submit=function(){var editorobj=document.getElementsByName('sb233editor'); if(editorobj.length&&typeof($scope.parentscope.processtext)=='function')$scope.parentscope.processtext(editorobj[0].textContent,$scope.htmlcontent);else  alert('Error - cannot access editor text or parent window!')}
+  } else { $scope.htmlcontent='Error - Cannot access parent window!'}
+
+     angular.element(document).ready(function(){
+      //      $scope.editorheight=window.outerHeight-60;
+$scope.seteditortopmargin()
+
+})
+        }]);
+    </script>
+</body></html>

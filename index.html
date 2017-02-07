@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html>
+<head><title>SB233.COM</title><meta name="viewport" content="initial-scale=1.0"> <meta http-equiv="X-UA-Compatible" content="IE=10">
+<script src="script/angular.min.js"></script>
+<script src="script/angular.route.min.js"></script>
+
+<script src="script/angular.uiroute.js"></script>
+<script src="script/config.js"></script>
+
+	 <script>
+function getArrayFromNums(start,fin)
+{
+  var arr=[];
+  if(!isNaN(start)&&!isNaN(fin))
+while(start<=fin)
+arr.push(start++);
+  return arr
+}
+function escapeHtml(unsafe) {
+    return typeof(unsafe)=='string'?unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;"):'';
+ }
+ function escapeRegex(input)
+ {
+return typeof(input)=='string'?input.replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&"):''
+ }
+function updateURLParameter(url, param, paramVal)
+{
+    var TheAnchor = null;
+    var newAdditionalURL = "";
+    var tempArray = url.split("?");
+    var baseURL = tempArray[0];
+    var additionalURL = tempArray[1];
+    var temp = "";
+
+    if (additionalURL) 
+    {
+        var tmpAnchor = additionalURL.split("#");
+        var TheParams = tmpAnchor[0];
+            TheAnchor = tmpAnchor[1];
+        if(TheAnchor)
+            additionalURL = TheParams;
+
+        tempArray = additionalURL.split("&");
+
+        for (var i=0; i<tempArray.length; i++)
+        {
+            if(tempArray[i].split('=')[0] != param)
+            {
+                newAdditionalURL += temp + tempArray[i];
+                temp = "&";
+            }
+        }        
+    }
+    else
+    {
+        var tmpAnchor = baseURL.split("#");
+        var TheParams = tmpAnchor[0];
+            TheAnchor  = tmpAnchor[1];
+
+        if(TheParams)
+            baseURL = TheParams;
+    }
+
+    if(TheAnchor)
+        paramVal += "#" + TheAnchor;
+
+    var rows_txt = temp + "" + param + "=" + paramVal;
+    return baseURL + "?" + newAdditionalURL + rows_txt;
+}
+
+function sb233shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex--);
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+function formobj()
+{
+  var obj={};
+ for (var i = 0; i < arguments.length; )
+        obj[arguments[i++]]=arguments[i++];
+        return obj;
+}
+function flattenobj(obj,key,cond)
+{
+
+
+return angular.isArray(obj)? (angular.isFunction(cond)? obj.filter(cond):obj).map(function(aobj){return  aobj[key]}):[]
+
+
+}
+
+
+
+sb233.factory('getresult',function($http,sb233config,sb233ids){
+
+var geterrmsg=function(errobj){
+
+ return typeof(errobj)=='object'?(errobj.message?errobj.message:('Code: '+errobj.status+', Status: '+errobj.statusText)):errobj
+},getrstmsg=function(result){return typeof(result)=='object'?( result[sb233ids.status]+(result[sb233ids.msg]?(', '+result[sb233ids.msg]):'')):''}
+
+
+return {
+postjson:function(url,obj,type){
+  var result={}
+  //,form_data = new FormData()
+  ;
+
+//for ( var key in obj ) {
+   // form_data.append(key, obj[key]);
+//}
+return $http({
+    method: 'POST',
+    url: url,
+     transformRequest: function(obj) {
+        var str = [];
+        for(var p in obj)
+        str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+        return str.join("&")
+    },
+    data: obj,
+    headers: {'Content-Type':type|| 'application/x-www-form-urlencoded'}
+}).then(function(data) {
+    try {
+      
+           result[sb233ids.data]=data.data;
+          result.resultmsg =getrstmsg(data)
+        }
+catch(error){
+  
+
+
+result[sb233ids.error]=geterrmsg(error)
+
+}
+  return result},function(error){result[sb233ids.error]=geterrmsg(error);return result})
+
+},
+gettexts:function(scope,menubar,urlobj,page){  
+
+
+  scope.showloading=true;
+ 
+this.getjson(urlobj.url,urlobj.params).then(function(result){
+scope.showloading=false;
+
+if(!menubar.showerror(  result[sb233ids.error])){
+menubar.delenabled=scope.sb233opts.selectedall=false;
+  scope.sb233opts.cpage=Number(result[sb233ids.data][sb233ids.page]);
+
+scope.tpage=getArrayFromNums(1,-Math.floor(-((scope.sb233opts.ctotal=result[sb233ids.data][sb233ids.uppp])/scope.sb233opts.pp)));
+
+      scope.results = result[sb233ids.data][sb233ids.entries]}
+    })},
+	getjson:function(url,obj)
+	{
+var result={};if(angular.isObject(obj))
+Object.keys(obj).forEach(function(key){url=updateURLParameter(url,key,obj[key])});
+
+  return $http.get(url).then(function(data) {
+   	try {
+          result.resultmsg =getrstmsg(data);
+   		
+           result[sb233ids.data]=data.data
+        }
+catch(error){
+result[sb233ids.error]=geterrmsg(error)
+
+}
+	return result},function(error){result[sb233ids.error]=geterrmsg( error);return result});
+
+}
+}}).factory('utils',function(){
+
+  return {
+getsize:function($size){
+    var size  = parseFloat($size);
+    var rank =0;
+    var rankchar ='Bytes';
+    while(size>1024){
+size = size/1024;
+rank++}
+    if(rank==1)rankchar='KB';    
+    else if(rank==2)rankchar='MB';    
+    else if(rank==3)rankchar='GB';    
+    return size.toFixed(2)+ ' '+ rankchar}
+
+  ,
+  getext:function(filename,standin){
+    standin=standin||'File';var ext=(/[.]/.exec(filename)) ? /[^.]+$/.exec(filename)[0] : standin;
+return ext.length>7?standin:ext;
+  },
+
+
+  getshort:function(filename,length,standin){
+    standin=standin||'...';
+return filename.length>length?filename.substr(0,length-standin.length)+' '+standin:filename;
+  }
+}}).factory('selectactions',function(sb233ids){
+return{
+  nameid:'id',
+  checkdelenabled:function(scope,menubar){
+  menubar.delenabled=!!(  sb233ids.names=flattenobj(scope.results,this.nameid,function(arst){return arst.class=='selected'})).length;
+       menubar.tip=angular.isArray(sb233ids.names)? sb233ids.names.length:''
+
+  
+},
+
+unselectall:function(scope,menubar){menubar.showutil(true);
+if(scope.results instanceof Array)
+{ scope.results.forEach(function(e){e.class=''});
+sb233ids.names=[];
+   scope.sb233opts.selectedall= menubar.delenabled=false
+
+}
+},
+
+unselectaction:function(scope,result,menubar){
+     if(angular.isObject(result))if(result.class)result.class='';else scope.selectaction(result);
+  this.checkdelenabled(scope,menubar)
+
+    },
+
+selectaction:function(scope,result,menubar){
+   result.class='selected';
+ // console.log($event.currentTarget.offsetHeight);
+// result.height= $event.currentTarget.offsetHeight-2;
+  this.checkdelenabled(scope,menubar)
+},
+selectall:function(scope,menubar,selectedall){
+  if(selectedall){
+scope.results.forEach(function(e){if(e.visible)e.class='selected'});
+  this.checkdelenabled(scope,menubar)
+}else this.unselectall(scope,menubar)
+},
+
+init:function(scope,menubar,nameid){
+this.nameid=nameid;
+  var selectactions=this;  
+  scope.sb233opts={selectedall:false,cpage:1}
+  scope.sbsearch=function(result){
+  var visible=false;
+  scope.sbprepare(result);
+if(angular.isObject(scope.searchRegex))
+scope.sbattrs.forEach(function(attr){
+if(!visible)visible=scope.searchRegex.test(result[attr])
+});
+else visible=true;
+return (result.visible=visible)
+}
+scope.hideSearchBar=function(){
+  scope.searchRegex=null; 
+ scope.showsearchinput=  scope.sb233opts.selectedall=false;
+
+}
+  scope.getSearchRegex=function(){
+    var rgst=escapeHtml(escapeRegex(scope.sb233opts.searchtext).trim());
+    scope.sb233opts.selectedall=false;
+    scope.searchRegex=rgst?new RegExp('('+rgst+')','ig'):null;
+  }
+  scope.showutil=function(){
+    menubar.showutil();    
+    scope.showsearchinput=menubar.utilmenu;
+    if(!scope.showsearchinput)scope.hideSearchBar()
+  }
+  scope.selectall=function(selectedall){
+    selectactions.selectall(scope,menubar,selectedall)
+  }
+  scope.unselectall=function()
+{
+  selectactions.unselectall(scope,menubar)
+  
+}
+ scope.unselectaction=function(result){
+selectactions.unselectaction(scope,result,menubar)
+ }
+}
+}
+}).factory('Scopes', function ($rootScope) {
+    var mem = {};
+
+    return {
+        store: function (key, value) {
+            mem[key] = value;
+        },
+        get: function (key) {
+            return mem[key];
+        }
+    };
+});
+
+sb233.directive('stopEvent', function () {
+        return {
+            
+            link: function (scope, element, attr) {
+                if(attr && attr.stopEvent)
+                    element.bind(attr.stopEvent, function (e) {
+                        e.stopPropagation();
+                    });
+            }
+        };
+     });
+   
+sb233.filter('randfhcls', function() {
+  return function(input) {
+    if(input==fileholderclassnos.length)
+    {
+      input=0;fileholderclassnos=sb233shuffle(fileholderclassnos)
+    }
+      return fileholderclassnos[input++]
+    
+  }
+}).filter('sbhighlight',function($sce){
+    return function(input,searchRegex){
+      input=escapeHtml( input);
+      return $sce.trustAsHtml(angular.isObject(searchRegex)?input.replace(searchRegex,'<span class="sbhl">$1</span>'):input)
+    }
+});
+sb233.run(function($rootScope) { 
+  $rootScope.$on("$stateChangeSuccess", function(event, toState, toParams, fromState, fromParams) {
+    //if (fromState.name === "") { 
+      // The initial transition comes from "root", which uses the empty string as a name.
+    //  alert("initial state: " + toState.name);
+    //}
+
+  });
+});
+
+
+sb233.controller('uploadgrid',function($scope,sb233config,sb233ids,Scopes){
+var parent=$scope.$parent.$parent;
+$scope.filepath=sb233config.FILEJSONPATH;
+parent.childUploader = $scope;
+$scope.flcount=1;
+$scope.submitFiles=function(){
+
+  if(parent.cansubmit){
+     if($scope.flcount)alert('Please leave no file input empty!');
+  else{
+  parent.cansubmit=false;
+  parent.doreload=true;
+
+document.getElementById('uploadgrid').submit()
+}}
+}
+$scope.flchange=function(fd){$scope.flcount=$scope.flcount+(fd?-1:+1)}
+$scope.delfile=function(eve)
+{
+  $scope.flcount--;
+  angular.element(eve.target).parent().remove()
+}
+$scope.uploadDone=function(){parent.cansubmit=true;parent.$apply()}
+
+}).directive("sbUploader", function ($compile,sb233config) {
+return {
+   
+    restrict: 'E',
+   template:sb233config.filetemplate,
+    link: function (scope, elm) {
+     
+
+      scope.addFile = function(){
+scope.flcount++;
+           elm.append($compile(sb233config.filetemplate)(scope))
+        }
+    }
+};
+}).directive('iframeOnload', [function(){
+return {
+    scope: {
+        callBack: '&iframeOnload'
+    },
+    link: function(scope, element, attrs){
+        element.on('load', function(){
+            return scope.callBack();
+        })
+    }
+}}]).directive("sbChange", [function () {
+    return {
+        scope: {
+            callBack: "&sbChange"
+        },
+        link: function (scope, element, attributes) {
+            element.bind("change", function (changeEvent) {
+              return scope.callBack({fname:changeEvent.target.files[0]})
+            });
+        }
+    }
+}]);;
+
+sb233.controller('textgrid',function($scope,  sb233config,sb233ids,getresult,selectactions,utils,Scopes) {
+      var menubar=  Scopes.get('menubar');
+ $scope.sbattrs=['abstract'];
+   
+   selectactions.init($scope,menubar,'id');
+$scope.sb233opts.pp=10;
+
+$scope.sbprepare=function(result){
+  if(!result.abstract)
+result.abstract=decodeURIComponent((result.id||'').split(' ')[0])
+}
+
+      menubar.showtext();
+
+  $scope.selectaction=function(result){
+    if(angular.isObject(result))
+    if(result.class&&result.id)
+   menubar.edittext(result.id);
+else selectactions.selectaction($scope,result,menubar)
+  }
+
+
+$scope.gettexts=function(page){
+getresult.gettexts($scope,menubar,{url:sb233config.TEXTJSONPATH, params: formobj(sb233ids.page,page?page:($scope.sb233opts.cpage?$scope.sb233opts.cpage:1))},page)
+}
+
+$scope.gettexts();
+}
+);
+
+sb233.controller('filegrid', function($scope,  sb233config,sb233ids,getresult,selectactions,utils,Scopes) {
+    var menubar=    Scopes.get('menubar');
+$scope.sbattrs= ['name','ext'];
+   selectactions.init($scope,menubar,'name');
+
+$scope.fileholderclassnospos=fileholderclassnos.length;
+
+$scope.sb233opts.pp=20;
+
+
+    menubar.showfile();
+$scope.sbprepare=function(result)
+{
+  if(!result.dsize)
+  result.dsize=utils.getsize(result.size);
+  if(!result.ext)
+
+result.ext=utils.getext(result.name);
+  if(!result.short)
+
+result.short=utils.getshort(result.name,35);
+  if(!result.dtime)
+
+result.dtime=(result.time||'').substring(2,16)
+}
+	$scope.selectaction=function(result){
+    if(angular.isObject(result))
+    if(result.class&&result.name)
+    window.open(sb233config.FILEDOWNPATH+encodeURI(result.name),'_blank')
+else selectactions.selectaction($scope,result,menubar)
+  }
+
+
+$scope.gettexts=function(page){
+
+getresult.gettexts($scope,menubar,{url:sb233config.FILEJSONPATH, params: formobj(sb233ids.page,page?page:($scope.sb233opts.cpage?$scope.sb233opts.cpage:1))},page)
+}
+$scope.gettexts()
+});
+  	
+sb233.controller('menubar',function($scope,$http,getresult,sb233config,sb233ids, Scopes){
+ //$scope.mask=$scope.showloading=$scope.utilmenu=false;
+
+var postdels=function(path){
+
+   if($scope.delenabled)
+    if(confirm('Delete '+sb233ids.names.length+' '+'items?')){
+   getresult.postjson(path,formobj(sb233ids.updel,sb233ids.names.join(','))).then(function(result){
+if($scope.doreload=!$scope.showerror(result[sb233ids.error]))
+
+    $scope.showmaskedcontent(result[sb233ids.data]&&result[sb233ids.data][sb233ids.responses]?result[sb233ids.data][sb233ids.responses]:result.resultmsg)})
+ }
+}
+ $scope.delfiles=function(){
+ postdels(sb233config.FILEJSONPATH)
+ }
+ $scope.deltexts=function(){
+ postdels(sb233config.TEXTJSONPATH)
+ }
+  $scope.uploadfiles=function(){
+$scope.showtemplate('uploader.html');
+$scope.contentopts.filemenu=$scope.cansubmit= true
+  }
+
+$scope.addFile=function(){
+  $scope.childUploader.addFile()
+}
+
+$scope.submitFiles=function(){
+  $scope.childUploader.submitFiles()
+}
+
+
+ $scope.processtext=function(title,content){
+contentloading();
+ getresult.postjson(sb233config.TEXTJSONPATH ,formobj(sb233ids.updparam,encodeURIComponent(title.substring(0,100)), sb233ids.updel, $scope.textname, sb233ids.uptext,content)).then(function(result){
+  if(result[sb233ids.error]){
+  alert(result[sb233ids.error]);
+showtemplate()
+}else {
+
+  $scope.showmaskedcontent(result[sb233ids.data]?result[sb233ids.data]:result.resultmsg);$scope.doreload=true}
+ })
+ }
+ $scope.showutil=function(hide){
+  if(!hide||(hide&&$scope.utilmenu)){
+  
+  if(($scope.utilmenu=!$scope.utilmenu))
+  $scope.reshowmenu=$scope.textmenu?$scope.showtext:$scope.showfile;
+  if(!$scope.utilmenu)$scope.reshowmenu();
+  else $scope.textmenu=$scope.filemenu=false
+}
+ }
+ $scope.showerror=function(errmsg){
+  if(errmsg) {
+
+$scope.showmaskedcontent('Error - '+errmsg);
+$scope.contentstyle='error';
+    return true}
+    else $scope.hidemask()
+ }
+$scope.showmaskedcontent=function(msg,style){
+  $scope.contentstyle=style;
+  $scope.mask=$scope.showcontent=true;$scope.showloading=false;$scope.sb233content=msg
+}
+var contentloading=function(){
+  $scope.showloading=$scope.mask=true;
+  $scope.showtmp=$scope.showcontent=false
+}
+$scope.hideloading=function(){
+  $scope.showloading=false
+}
+$scope.getcontent=function(url){
+   contentloading();
+ $http.get(url).then(function(data){$scope.showmaskedcontent(data.data)},function(error){$scope.showerror(error)})
+}
+ $scope.showip=function(){
+$scope.getcontent('/services/util.php?action=getip')
+  }
+  $scope.resetMask=function(){
+    $scope.contentopts={filemenu:false}
+    $scope.hideloading();
+    $scope.tfullscreen=$scope.fullscreen=false;
+    $scope.contenttemp=$scope.contentstyle=$scope.sb233content=""
+  }
+  $scope.showfile=function(){$scope.textmenu=false;$scope.filemenu=true}
+  $scope.showtext=function(){$scope.textmenu=true;$scope.filemenu=false}
+$scope.hidemask=function(){if($scope.doreload)location.reload();else {$scope.mask=false;
+$scope.resetMask();
+$scope.$applyAsync()}}
+$scope.showtemplate=function(tmp,msg){$scope.hideloading();$scope.showtmp=true; $scope.showmaskedcontent(msg);if(tmp)$scope.contenttemp=tmp}
+$scope.edittext=function(name){
+  contentloading();  
+  $scope.textname=name;
+  if(name)
+  getresult.postjson(sb233config.TEXTJSONPATH,{'update':name}).then(function(data){$scope.edittextdata=data[sb233ids.data];$scope.showtemplate('editorbox.html');$scope.tfullscreen=true},function(error){$scope.showerror(error)})
+  else {$scope.edittextdata='';$scope.showtemplate('editorbox.html');$scope.tfullscreen=true}
+}
+ $scope.delenabled=false;
+ $scope.resetMask();
+  Scopes.store('menubar', $scope)
+
+})
+	 </script> 
+
+ 
+<style>
+.gridcontainer{min-height: 100%;width: 100%;position: absolute;top:0;left:0;box-sizing:border-box;}
+span.sbhl {background: rgba(255,255,255,0.6);color:#000;font-weight: bold}
+#searchbar{position: fixed;z-index:3;top:0;left:0;width: 100%}
+#searchinputwrapper{background: rgba(19,23,32,0.6);padding: 5px; margin: 5px 0 5px 55px}
+#searchinput{border-radius: 15px;border: 1px solid;height: 20px;overflow: hidden;position: relative}
+#searchinput input{width: 100%;height: 20px;padding: 0px 25px 0 5px}
+#filegrid{padding-left: 70px;padding-top: 5px}
+#textgrid{padding-top: 20px}
+
+.margintop{padding-top: 30px}
+
+  .error {color:red;font-weight: bold}
+  body {background: #37415B}
+  .fileholder {
+    float:left;margin:20px;padding:20px 0px 10px 0;
+    border-radius: 5px 0 5px 5px;
+
+    width: 180px;height:300px
+  }
+#sidemenu ul li.inactive{cursor:not-allowed;color:#98a1b9;}
+.textholder.selected .ticker{display: block}
+.textholder .ticker{
+background: #98a1b9;
+    color: #000;
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 30px;
+    display: none;
+    height: 100%;
+    cursor: pointer
+  }
+  .textholder{color:#fff;word-break: break-all;padding:20px 20px 20px 70px;font-family: monospace; }
+   .textholder .row{background: rgba(19, 23, 32,0.6);padding: 5px;position: relative}
+   .textholder .container{border:1px solid #37415B; position: relative;overflow: hidden;}
+
+  .textholder div{padding: 0 5px 0 5px}
+  .textholder .time{z-index:233;color:#98a1b9;position: absolute;top:1px;left:10px;font-size: 12px;background: #37415B;margin: 0;padding: 0}
+  .textholder .time div{background: rgba(19, 23, 32,0.6);}
+  .textholder .abstract{font-size: 22px; word-break: break-all;padding: 20px }
+.textholder.selected .row,.textholder.selected .time div{background: rgba(19, 23, 32,0.7)}
+
+.textholder:hover .row,.textholder:hover .time div {background: rgba(0,0,0,0.7)}
+.fileholder.selected p,.fileholder:hover p {font-weight: bold}
+div[class^='fileholder bg-']{cursor: pointer;position: relative; }
+
+
+.fileholder.bg-green {background-color:#4fb6b0;color:#4fb6b0  }
+.fileholder.bg-blue{background-color:#3dc0f0;color:#3dc0f0} 
+
+.fileholder.bg-darkpink{background-color:#cc6699;color:#cc6699 }
+
+.fileholder.bg-jade{background-color:#5bb571 ;color:#5bb571 }
+.fileholder.bg-key{background-color:#4a525a;color:#4a525a }
+.fileholder.bg-lightgreen{background-color:#b2cc1b;color:#b2cc1b}
+.fileholder.bg-mag{background-color:#da6768;color: #da6768 }
+.fileholder.bg-pink{background-color:#e83968;color:#e83968  }
+.fileholder.bg-red{background-color:#d30f33;color: #d30f33}
+.fileholder.bg-yellow{background-color:#fbb910;color:#fbb910}
+
+
+.fileholder p
+{
+  position: relative;
+ word-break: break-all;
+  font-size: 15px;
+ font-family: monospace;
+  padding: 10px 0 10px 20px;
+  margin: 10px 10px 10px -10px;
+  background: rgba(0,0,0,0.7);
+ 
+  -webkit-box-shadow: 0px 2px 4px rgba(0,0,0,0.7);
+  -moz-box-shadow: 0px 2px 4px rgba(0,0,0,0.7);
+  box-shadow: 0px 2px 4px rgba(0,0,0,0.7);
+}
+
+
+#mask{z-index:23333;width:100%;height: 100%;position: fixed;top:0;left:0;  background: rgba(19,23,32,0.4)}
+#mask .content{width: 100%;height:100%; background: #F1F1F1;position: relative; }
+#mask .content.min{margin: 50px auto;width: 80%;height:auto;border: 1px solid rgba(0,0,0,.2);border-radius: 6px;}
+
+.fileholder p:after
+{
+  content: ' ';
+  position: absolute;
+  width: 0;
+  height: 0;
+  left: 0px;
+  top: 100%;
+  border-width: 5px 5px;
+  border-style: solid;
+  border-color: rgba(0,0,0,0.7) rgba(0,0,0,0.7) transparent transparent;
+}
+.fileholder span.filename{display:inline-block;color:#fff;font-size:22px;max-height: 80px; }
+.fileholder.selected span.filename{ overflow-y:auto}
+.fileholder span.filename .fullname{display: none}
+
+.fileholder.selected span.filename .short{display: none}
+.fileholder.selected span.filename .fullname{display: inline}
+
+.fileholder p.ext:before
+{
+  content: ' ';
+  position: absolute;
+  width: 30px;
+  height: 0;
+  left: 100%;
+  top: 0;
+  border-width: 26px 10px;
+  border-style: solid;
+  border-color: rgba(0,0,0,0.7)  transparent rgba(0,0,0,0.7) rgba(0,0,0,0.7);
+   -webkit-box-shadow: 0px 2px  0 rgba(0,0,0,0.7);
+  -moz-box-shadow: 0px 2px  0 rgba(0,0,0,0.7);
+  box-shadow: 0px 2px  0 rgba(0,0,0,0.7);
+}
+.loading{background:url('images/loading.gif') no-repeat center / 10%;width:100%;height:100%;position: absolute;}
+
+
+.fileholder p.ext{
+  display:inline-block; padding-left:30px;text-transform: uppercase;font-size:25px;    font-family: fantasy; letter-spacing: 2px;
+  -webkit-box-shadow: 0px 2px 0 rgba(0,0,0,0.7);
+  -moz-box-shadow: 0px 2px 0 rgba(0,0,0,0.7);
+  box-shadow: 0px 2px 0 rgba(0,0,0,0.7);
+}
+.fileholder .exthld {position: relative;}
+.fileholder .exthlder .tick {position:absolute;right:20px;top:35px;font-size:35px;color:#37415B;display: none}
+.fileholder.selected .exthlder .tick{display: block}
+
+.fileholder .righttopbgdiv{width: 29px;height:29px;position: absolute; top:0;right:0;background-image:url('images/fhrighttopbgs.png')}
+.fileholder.bg-blue .righttopbgdiv { background-position: -0px -0px }
+.fileholder.bg-darkpink .righttopbgdiv{ background-position: -30px -0px }
+.fileholder.bg-green .righttopbgdiv{ background-position: -60px -0px }
+.fileholder.bg-jade .righttopbgdiv{ background-position: -0px -29px }
+.fileholder.bg-key .righttopbgdiv{ background-position: -30px -29px }
+.fileholder.bg-lightgreen .righttopbgdiv{ background-position: -60px -29px }
+.fileholder.bg-mag .righttopbgdiv{ background-position: -0px -58px }
+.fileholder.bg-pink .righttopbgdiv{ background-position: -30px -58px }
+.fileholder.bg-red .righttopbgdiv{ background-position: -60px -58px }
+.fileholder.bg-yellow .righttopbgdiv{ background-position: -0px -87px }
+
+.fileholder .divider{height:1px;margin:10px 5% 20px 0;background: #37415b}
+
+#menubar{width: 50px;height:100%;position: fixed;left:0;top:0;z-index:2;padding-top: 50px}
+#menubar ul {list-style-type:none;margin: 0;padding: 0}
+#menubar li{border-top: 1px solid #37415B; padding: 15px; box-sizing:border-box;    text-transform: uppercase;    font-family: monospace;    font-size: 30px; color:#fff;word-break:break-all;position: relative;}
+#menubar li:last-child{border-bottom: 1px solid #37415B}
+#menubar li:hover{background: rgba(55, 65, 91,0.7);cursor: pointer}
+#menubar li .tip{position: absolute;
+
+    right: 2px;
+    top: 2px;
+    color: #fff;
+    font-size: 12px;
+    font-family: monospace;}
+
+#topbar {position: fixed;bottom:0px;height: 20px; right:10px;padding: 10px; color:#98a1b9;opacity:  0.7}
+#topbar a {margin:0 3px 0 3px}
+#topbar,#topbar a,#topbar a:active,#topbar a:visited{color:#98a1b9;    font-family: monospace; }
+#topbar a:hover{color:#fff;}
+#topbar:hover {
+opacity: 1;
+}
+
+#topbar,#menubar {background: #131720 ;box-shadow: 0 10px 16px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19) !important}
+
+#contentbar{    padding: 5px;  border-bottom:1px solid;     }
+#uploadgrid .action, #contentbar span, #searchbar .action {cursor:pointer ;margin:0 5px 0 5px;font-size:15px;font-family: monospace; }
+#searchbar .action{position: absolute;right:10px;top:12px;}
+#uploadgrid .action:hover, #contentbar span:hover,#searchbar .action:hover{font-weight: bold}
+#uploadgrid .action.disabled:hover,#contentbar span.disabled:hover{cursor: not-allowed}
+
+#uploadgrid .action{text-transform: uppercase;}
+#uploadgrid .action:after{content:'\00a0]'}
+#uploadgrid .action:before{content:'[\00a0'}
+#uploadgrid div.flinput:first-child .action.del{display: none}
+#contentbar span:not(:last-child):after{content: '\00a0|'}
+#uploadgrid .action.disabled:hover,#contentbar span.disabled:hover,#uploadgrid .action:after,#uploadgrid .action:before,#contentbar span:hover:after{font-weight:initial;}
+
+
+
+#caption{
+position:absolute;right:10px;top:5px;text-transform: uppercase;    font-family: monospace;    color: #98a1b9
+}
+
+@media only screen and (max-device-width: 736px) 
+{
+  #caption{font-size: 10px}
+  }
+</style>  
+
+  </head>
+	<body ng-app="sb233">  
+
+    <script type="text/ng-template" id="pager.html" >
+
+      <div id='topbar' stop-event='click'  >
+<input ng-model='sb233opts.selectedall'  ng-change='selectall(sb233opts.selectedall)'   type="checkbox"/>  
+    <!-- <a href='javascript:void 0' ng-click='gettexts(1)'>&le;&le;</a> <a href='javascript:void 0'  ng-click='gettexts(cpage-1)'>&le;</a> -->
+
+<select ng-model="sb233opts.cpage" ng-options="page as page for page in tpage" ng-change='gettexts(sb233opts.cpage)'></select>
+
+ <!--<a href='javascript:void 0' ng-click='gettexts(cpage+1)'>&gt;</a><a href='javascript:void 0' ng-click='gettexts(tpage[tpage.length-1])'>&gt;&gt;</a>--> </div>
+
+      </script>
+  <script type="text/ng-template" id="caption.html">
+  <div id='searchbar' stop-event='click'>
+<a  href='javascript:void 0' ng-click='showutil()'  style='float:left' ><img src='images/magnifier.png'  width='30px' style='padding:10px 0 5px 10px' /></a><div id='searchinputwrapper' ng-show='showsearchinput'><div id='searchinput' ><input ng-model='sb233opts.searchtext' ng-change='getSearchRegex()' /></div><div class='action' ng-click='hideSearchBar()'>| X </div></div></div>
+<div id='caption'>{{sb233opts.pp*(sb233opts.cpage-1)+1}} - {{sb233opts.ctotal>sb233opts.pp*sb233opts.cpage?(sb233opts.pp*sb233opts.cpage):sb233opts.ctotal}} of {{sb233opts.ctotal}} | double click to open items</div> 
+  <div ng-show='showloading' class='loading'>&nbsp;</div>
+
+</script>
+	
+		 <script type="text/ng-template" id="texts.html">
+   
+
+   <div ng-click='unselectall()' class='gridcontainer {{showsearchinput?"margintop":""}}' id='textgrid' ng-controller='textgrid'>
+    <ng-include src="'caption.html'" ></ng-include>
+<div ng-repeat="result in results|filter:sbsearch" class='textholder {{result.class}}'  ><div class='row'  ng-click='selectaction(result);'  stop-event='click'><div class='time'><div>{{result.time}}</div></div><div class='container'><div class='abstract'><span ng-bind-html='result.abstract|sbhighlight:searchRegex'></span>&nbsp;...</div><div class='ticker'    ng-click='unselectaction(result)'  stop-event='click'>&check;</div></div>
+    </div></div>
+    <ng-include src="'pager.html'" />
+    </div>
+
+</script>
+
+  
+  <script type="text/ng-template" id="files.html">
+
+    <div   ng-click='unselectall()' class='gridcontainer' id='filegrid' ng-controller='filegrid'>
+    <ng-include src="'caption.html'" ></ng-include>
+
+<div ng-repeat="result in results|filter:sbsearch" class='fileholder bg-{{fileholderclassnospos|randfhcls}} {{result.class}}' ng-click='selectaction(result)'  stop-event='click' ><div class='righttopbgdiv'></div><div class='exthlder'><p class='ext' ng-bind-html='result.ext|sbhighlight:searchRegex'></p><div class='tick'  ng-click='unselectaction(result)'  stop-event='click'>&check;</div></div><div class='divider'></div><p>{{result.dtime}}</p><p>{{result.dsize}}</p>
+       <p title='{{result.name}}' ><span class='filename'><span class='short' ng-bind-html='result.short|sbhighlight:searchRegex'></span><span class='fullname' ng-bind-html='result.name|sbhighlight:searchRegex'></span></span></p>
+    </div>
+    <ng-include src="'pager.html'" />
+
+    </div>
+</script>
+     
+      <script type="text/ng-template" id="editorbox.html">
+<iframe  src='editor.html' width='100%' style='height:70vh;border:none;' webkitAllowFullScreen mozallowfullscreen allowFullScreen/>
+      </script>
+
+      <script type="text/ng-template" id="uploader.html">
+      <div ng-controller='uploadgrid'>
+      <form target="sbuploadtarget" enctype='multipart/form-data' method="post" action="{{filepath}}"  id='uploadgrid'><input value='sb233' style='display:none' name='hasfile' />
+      <sb-uploader></sb-uploader>
+      </form>
+<iframe iframe-onload="uploadDone()" name='sbuploadtarget' style='border:none;overflow:scroll'/>
+</div>
+        </script>
+	
+  <div id='sidemenu' ng-controller='menubar'>
+
+
+  <div id='menubar' ><ul ng-show="textmenu"><li onclick='location.href="#/"'>file</li><li ng-click='edittext()'>new</li><li ng-class='{"inactive":!delenabled}' ng-click='deltexts()'><div class='tip' ng-show='delenabled'>{{tip}}</div>del</li></ul><ul ng-show="utilmenu"><li ng-click='showutil()'>back</li><li ng-click='showip()'>ip</li><li>stats</li></ul><ul ng-show="filemenu"><li onclick='location.href="#/texts"'>text</li><li  ng-click='uploadfiles()'>new</li><li  ng-class='{"inactive":!delenabled}' ng-click='delfiles()'><div class='tip' ng-show='delenabled'>{{tip}}</div>del</li></ul></div>
+    <div id='mask'  ng-show="mask"  ng-click='hidemask()'> 
+      
+   <div ng-show='showloading' class='loading'  stop-event='click'>&nbsp;</div>
+    
+  <div ng-show='showmaskedcontent'  stop-event='click' class='content {{fullscreen?"":"min"}} {{contentstyle}} '><div id='contentbar'   stop-event='click' ng-hide='tfullscreen&&fullscreen'><span ng-click='fullscreen=!fullscreen'>{{fullscreen?"Resume":"Maximize"}}</span><span ng-show='contentopts.filemenu' ng-click='addFile()'>Add</span><span ng-show='contentopts.filemenu' ng-click='submitFiles()' ng-class='{"disabled":!cansubmit}'>Upload</span><span ng-click='hidemask()'>Close</span></div><div style='padding:5px;font-size:  7vh'>{{sb233content}}</div><ng-include src='contenttemp' ng-show='showtmp'></ng-include></div></div></div>
+<ng-view />
+	</body>
+	</html>
