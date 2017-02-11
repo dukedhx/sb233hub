@@ -36,28 +36,39 @@ private function echojson($item)
 }
 public function outputEntities(&$farr,$page=0,$pp=10)
 {
-
+global $authrst,$doauth;
 $length=sizeof($farr);
 $start=$pp*$page;
 if($start>=$length||$start<0){$start=0;$page=0;}
+if(is_string($authrst))$this->outputUSER($authrst);
 $this->outputPAGE($page+1,$length);
 
 $this->outputJSON(array_slice($farr,$start,$pp));
 }
+private function echoJSONDelimits()
+{
+	if(!$this->first)echo ',';
+	$this->first=false;
+}
 public function outputPAGE($cpage,$ctotal)
 {
 global $uppage,$uppp;
-
-	if(!$this->first)echo ',';
+$this->echoJSONDelimits();
 	echo "\"$uppage\":\"$cpage\",\"$uppp\":\"$ctotal\"";
-	$this->first=false;
+}
+public function outputUSER($user){
+$this->echoJSONDelimits();
+	
+echo "\"user\":\"$user\"";
+	
 }
 public function outputJSON(&$array,$name=null,$callp=false){
 	if(is_null($name))$name=$this->ename;
-	if(!$this->first)echo ',';
+$this->echoJSONDelimits();
+	
 echo " \"$name\":[";
 $this->iterate($array,$callp);
-echo ']';$this->first=false;
+echo ']';
 }
 
 function __destruct() {

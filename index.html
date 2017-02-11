@@ -5,12 +5,13 @@
 <script src="script/angular.route.min.js"></script>
 
 <script src="script/angular.uiroute.js"></script>
+
 <script src="script/config.js"></script>
 
 	 <script>
-function getArrayFromNums(start,fin)
+function getArrayFromNums(start,fin,stdin)
 {
-  var arr=[];
+  var arr=angular.isArray( stdin)?stdin:[1];
   if(!isNaN(start)&&!isNaN(fin))
 while(start<=fin)
 arr.push(start++);
@@ -105,10 +106,7 @@ return angular.isArray(obj)? (angular.isFunction(cond)? obj.filter(cond):obj).ma
 
 
 }
-
-
-
-sb233.factory('getresult',function($http,sb233config,sb233ids){
+sb233.factory('getresult',function($http,$templateRequest,sb233config,sb233ids){
 
 var geterrmsg=function(errobj){
 
@@ -117,7 +115,7 @@ var geterrmsg=function(errobj){
 
 
 return {
-postjson:function(url,obj,type){
+postjson:function(url,obj,type,urlobj){
   var result={}
   //,form_data = new FormData()
   ;
@@ -125,9 +123,12 @@ postjson:function(url,obj,type){
 //for ( var key in obj ) {
    // form_data.append(key, obj[key]);
 //}
+if(angular.isObject(urlobj))
+Object.keys(urlobj).forEach(function(key){url=updateURLParameter(url,key,urlobj[key])});
+
 return $http({
     method: 'POST',
-    url: url,
+    url: updateURLParameter(url,'yourbsb',(new Date()).getTime()),
      transformRequest: function(obj) {
         var str = [];
         for(var p in obj)
@@ -149,8 +150,14 @@ catch(error){
 result[sb233ids.error]=geterrmsg(error)
 
 }
-  return result},function(error){result[sb233ids.error]=geterrmsg(error);return result})
+  return result},function(error){ result[sb233ids.error]=geterrmsg(error);return result})
 
+},
+getdata:function(url){
+ return $http.get(updateURLParameter(url,'yourbsb',(new Date()).getTime())).then(function(data){return data},function(error){return geterrmsg(error)})
+},
+gettemplate:function(url){
+ return $templateRequest(url)
 },
 gettexts:function(scope,menubar,urlobj,page){  
 
@@ -162,6 +169,7 @@ scope.showloading=false;
 
 if(!menubar.showerror(  result[sb233ids.error])){
 menubar.delenabled=scope.sb233opts.selectedall=false;
+if(result[sb233ids.data][sb233ids.user])scope.user=result[sb233ids.data][sb233ids.user];
   scope.sb233opts.cpage=Number(result[sb233ids.data][sb233ids.page]);
 
 scope.tpage=getArrayFromNums(1,-Math.floor(-((scope.sb233opts.ctotal=result[sb233ids.data][sb233ids.uppp])/scope.sb233opts.pp)));
@@ -173,7 +181,7 @@ scope.tpage=getArrayFromNums(1,-Math.floor(-((scope.sb233opts.ctotal=result[sb23
 var result={};if(angular.isObject(obj))
 Object.keys(obj).forEach(function(key){url=updateURLParameter(url,key,obj[key])});
 
-  return $http.get(url).then(function(data) {
+  return $http.get(updateURLParameter(url,'yourbsb',(new Date()).getTime())).then(function(data) {
    	try {
           result.resultmsg =getrstmsg(data);
    		
@@ -256,7 +264,7 @@ this.nameid=nameid;
   scope.sb233opts={selectedall:false,cpage:1}
   scope.sbsearch=function(result){
   var visible=false;
-  scope.sbprepare(result);
+  //scope.sbprepare(result);
 if(angular.isObject(scope.searchRegex))
 scope.sbattrs.forEach(function(attr){
 if(!visible)visible=scope.searchRegex.test(result[attr])
@@ -317,13 +325,10 @@ sb233.directive('stopEvent', function () {
         };
      });
    
-sb233.filter('randfhcls', function() {
+sb233.filter('randfhcls', function(sb233ids) {
   return function(input) {
-    if(input==fileholderclassnos.length)
-    {
-      input=0;fileholderclassnos=sb233shuffle(fileholderclassnos)
-    }
-      return fileholderclassnos[input++]
+   var npos=Math.floor(Math.random() * (fileholderclassnos.length-1) );
+      return fileholderclassnos[ sb233ids.fileholderclassnos==npos?(sb233ids.fileholderclassnos=(npos==fileholderclassnos.length-1?0:(sb233ids.fileholderclassnos+1))):(sb233ids.fileholderclassnos=npos)]
     
   }
 }).filter('sbhighlight',function($sce){
@@ -331,7 +336,27 @@ sb233.filter('randfhcls', function() {
       input=escapeHtml( input);
       return $sce.trustAsHtml(angular.isObject(searchRegex)?input.replace(searchRegex,'<span class="sbhl">$1</span>'):input)
     }
-});
+}).filter('shortform',function(utils){
+return function(input){
+return utils.getshort(input,35)
+   
+}}
+).
+filter('decodeuri',function(){
+return function(input){
+return decodeURIComponent((input||'').split(' ')[0])
+
+}}
+).
+filter('getsize',function(utils){
+return function(input){
+return utils.getsize(input)
+}}
+).filter('getext',function(utils){
+return function(input){
+return utils.getext(input)
+}}
+);
 sb233.run(function($rootScope) { 
   $rootScope.$on("$stateChangeSuccess", function(event, toState, toParams, fromState, fromParams) {
     //if (fromState.name === "") { 
@@ -343,11 +368,12 @@ sb233.run(function($rootScope) {
 });
 
 
-sb233.controller('uploadgrid',function($scope,sb233config,sb233ids,Scopes){
+sb233.controller('uploadgrid',function($scope,getresult,sb233config,sb233ids,Scopes){
 var parent=$scope.$parent.$parent;
 $scope.filepath=sb233config.FILEJSONPATH;
 parent.childUploader = $scope;
 $scope.flcount=1;
+getresult.gettemplate('fileinput.html').then(function(html){$scope.fileinput=html});
 $scope.submitFiles=function(){
 
   if(parent.cansubmit){
@@ -359,25 +385,25 @@ $scope.submitFiles=function(){
 document.getElementById('uploadgrid').submit()
 }}
 }
-$scope.flchange=function(fd){$scope.flcount=$scope.flcount+(fd?-1:+1)}
+$scope.flchange=function(fd){$scope.flcount=$scope.flcount+(fd?-1:+1);if($scope.flcount<0)$scope.flcount=0}
 $scope.delfile=function(eve)
 {
   $scope.flcount--;
   angular.element(eve.target).parent().remove()
 }
-$scope.uploadDone=function(){parent.cansubmit=true;parent.$apply()}
+$scope.uploadDone=function(){parent.cansubmit=true;$scope.uploaded=true;parent.$apply()}
 
 }).directive("sbUploader", function ($compile,sb233config) {
 return {
    
     restrict: 'E',
-   template:sb233config.filetemplate,
+   templateUrl:'fileinput.html',
     link: function (scope, elm) {
      
 
       scope.addFile = function(){
 scope.flcount++;
-           elm.append($compile(sb233config.filetemplate)(scope))
+           elm.append($compile(scope.fileinput)(scope))
         }
     }
 };
@@ -404,17 +430,88 @@ return {
     }
 }]);;
 
+
+sb233.controller('checklist',function($scope,getresult,sb233ids)
+{
+  var parent=$scope.$parent.$parent,results,url,showresult=function(rsts){$scope.submitresult=rsts[sb233ids.data]?rsts[sb233ids.data]:(rsts[sb233ids.error]||rsts.resultmsg)},processrsts=function(rsts){
+    if(!rsts[sb233ids.data])showresult(rsts);
+      else{
+      $scope.submitresult='';       
+      $scope.results=rsts[sb233ids.data];
+      if($scope.listeditopts.detailedit)
+        $scope.startedit(Object.keys( $scope.results)[0]);
+      else
+$scope.rstkeys=Object.keys( $scope.results)
+    }
+  }
+  parent.apply=function(){
+
+    if($scope.listeditopts.detailedit&&(($scope.listeditopts.inputextraname&&!$scope.listeditopts.extratextvalue.trim())||!$scope.listeditopts.textvalue.trim()))
+alert('Please fill out all text boxes ...');
+     
+    
+   else if(!$scope.listeditopts.detailedit&&!$scope.batchitems.length)
+alert('Nothing to apply ...');
+
+    else{      
+      if(confirm($scope.listeditopts.detailedit?'Submit this user?':('Apply '+$scope.batchitems.length+' '+'changes?'))){
+    parent.cansubmit=false;
+getresult.postjson(url,$scope.listeditopts.detailedit? formobj($scope.listeditopts.checkboxparam,Number($scope.listeditopts.checkboxvalue),$scope.listeditopts.inputtextparam,$scope.listeditopts.textvalue,$scope.listeditopts.inputextraparam,$scope.listeditopts.extratextvalue):formobj($scope.batchparam,$scope.batchitems.join( $scope.listeditopts.batchparamdlt))).then(function(result){showresult(result);$scope.reload=true;if(!$scope.listeditopts.detailedit)parent.canceledit();if(angular.isFunction($scope.acb))$scope.acb($scope)}).finally(function(){parent.cansubmit=true})}}
+  }
+ parent.startedit= $scope.startedit=function(key){$scope.listeditopts.detailedit= parent.contentopts.detailedit=true;$scope.listeditopts.extratextvalue='';if(key){$scope.listeditopts.editing=true; $scope.listeditopts.textvalue=key;$scope.listeditopts.checkboxvalue=!!$scope.results[key];$scope.listeditopts.inputtextparam=$scope.listeditopts.inputeditparam}else {$scope.listeditopts.checkboxvalue=$scope.listeditopts.editing=false;$scope.listeditopts.inputtextparam=$scope.listeditopts.inputparam;$scope.listeditopts.textvalue=$scope.listeditopts.extratextvalue='';}}
+
+ parent.canceledit=function(){
+    $scope.listeditopts.detailedit= parent.contentopts.detailedit=false;
+if($scope.reload)
+    $scope.getresult();
+  $scope.reload=false
+  }
+$scope.processitem=function(key){ var index=$scope.batchitems.indexOf(key);if(index>-1)$scope.batchitems.splice(index,1); else $scope.batchitems.push(key)}
+$scope.getresult=function(){parent.showloading=true;getresult.getjson(url).then(function(data){processrsts(data);$scope.listeditopts.detailedit=false}).finally(function(){parent.hideloading()})
+}
+
+parent.$evalAsync();
+  (function(optsobj){
+    url=optsobj.url;
+    $scope.acb=optsobj.acb;
+    $scope.listeditopts={}; 
+    $scope.batchitems=[];
+    $scope.listeditopts.processedcls=optsobj.processedcls
+    $scope.listeditopts.detailedit=optsobj.detailedit;
+  $scope.listeditopts.inputtextdisabled=  optsobj.inputtextdisabled;
+  $scope.listeditopts.inputextratextdisabled=  optsobj.inputextratextdisabled;
+$scope.listeditopts.inputeditparam=optsobj.inputeditparam;
+    $scope.listeditopts.checkboxname=optsobj.checkboxname;
+    $scope.listeditopts.checkboxparam=optsobj.checkboxparam;
+    $scope.listeditopts.inputparam=optsobj.inputparam;
+    $scope.listeditopts.inputname=optsobj.inputname;
+$scope.listeditopts.inputextraname=optsobj.inputextraname;
+$scope.listeditopts.inputextraparam=optsobj.inputextraparam;
+$scope.listeditopts.processname=optsobj.processname;
+    $scope.batchparam=optsobj.batchparam;
+    $scope.batchparamdlt=optsobj.updeldlt||',';
+
+if($scope.listeditopts.detailedit=optsobj.detailedit)
+   $scope.startedit();
+else{
+   if(angular.isObject(optsobj.results))
+processrsts(optsobj.results);
+    else
+ $scope.getresult()
+ }
+
+  })(parent.checklistinit);  
+
+});
+
 sb233.controller('textgrid',function($scope,  sb233config,sb233ids,getresult,selectactions,utils,Scopes) {
       var menubar=  Scopes.get('menubar');
- $scope.sbattrs=['abstract'];
+ $scope.sbattrs=['id'];
    
    selectactions.init($scope,menubar,'id');
 $scope.sb233opts.pp=10;
 
-$scope.sbprepare=function(result){
-  if(!result.abstract)
-result.abstract=decodeURIComponent((result.id||'').split(' ')[0])
-}
+
 
       menubar.showtext();
 
@@ -434,6 +531,8 @@ $scope.gettexts();
 }
 );
 
+
+
 sb233.controller('filegrid', function($scope,  sb233config,sb233ids,getresult,selectactions,utils,Scopes) {
     var menubar=    Scopes.get('menubar');
 $scope.sbattrs= ['name','ext'];
@@ -445,20 +544,7 @@ $scope.sb233opts.pp=20;
 
 
     menubar.showfile();
-$scope.sbprepare=function(result)
-{
-  if(!result.dsize)
-  result.dsize=utils.getsize(result.size);
-  if(!result.ext)
 
-result.ext=utils.getext(result.name);
-  if(!result.short)
-
-result.short=utils.getshort(result.name,35);
-  if(!result.dtime)
-
-result.dtime=(result.time||'').substring(2,16)
-}
 	$scope.selectaction=function(result){
     if(angular.isObject(result))
     if(result.class&&result.name)
@@ -474,17 +560,20 @@ getresult.gettexts($scope,menubar,{url:sb233config.FILEJSONPATH, params: formobj
 $scope.gettexts()
 });
   	
-sb233.controller('menubar',function($scope,$http,getresult,sb233config,sb233ids, Scopes){
+sb233.controller('menubar',function($scope,$route,$timeout,getresult,sb233config,sb233ids, Scopes){
  //$scope.mask=$scope.showloading=$scope.utilmenu=false;
 
-var postdels=function(path){
+var contentloading=function(){
+  $scope.showloading=$scope.mask=true;
+  $scope.showtmp=$scope.showcontent=false
+},handleerr=function(error){$scope.showerror(error)},postdels=function(path){
 
    if($scope.delenabled)
     if(confirm('Delete '+sb233ids.names.length+' '+'items?')){
    getresult.postjson(path,formobj(sb233ids.updel,sb233ids.names.join(','))).then(function(result){
 if($scope.doreload=!$scope.showerror(result[sb233ids.error]))
 
-    $scope.showmaskedcontent(result[sb233ids.data]&&result[sb233ids.data][sb233ids.responses]?result[sb233ids.data][sb233ids.responses]:result.resultmsg)})
+    $scope.showmaskedcontent(result[sb233ids.data]&&result[sb233ids.data][sb233ids.responses]?result[sb233ids.data][sb233ids.responses]:result.resultmsg)},function(error){handleerr(error)})
  }
 }
  $scope.delfiles=function(){
@@ -496,6 +585,14 @@ if($scope.doreload=!$scope.showerror(result[sb233ids.error]))
   $scope.uploadfiles=function(){
 $scope.showtemplate('uploader.html');
 $scope.contentopts.filemenu=$scope.cansubmit= true
+  }
+
+   $scope.showusers=function(){
+    $scope.checklistinit={url:sb233config.USERJSONPATH,inputname:'Username',inputparam:sb233ids.usrparam,checkboxname:'Is Admin:',checkboxparam:sb233ids.roleparam,batchparam:sb233ids.updel,inputextraname:'New Pin ',inputtextdisabled:true,  inputextraparam:sb233ids.pwparam, processname:'del', inputeditparam:'del', processedcls:'userprocessed'}
+$scope.showtemplate('checklists.html');
+$scope.contentopts.listmenu=$scope.cansubmit= true;
+
+
   }
 
 $scope.addFile=function(){
@@ -532,6 +629,7 @@ showtemplate()
 
 $scope.showmaskedcontent('Error - '+errmsg);
 $scope.contentstyle='error';
+$scope.contentopts.extramenu=false;
     return true}
     else $scope.hidemask()
  }
@@ -539,29 +637,27 @@ $scope.showmaskedcontent=function(msg,style){
   $scope.contentstyle=style;
   $scope.mask=$scope.showcontent=true;$scope.showloading=false;$scope.sb233content=msg
 }
-var contentloading=function(){
-  $scope.showloading=$scope.mask=true;
-  $scope.showtmp=$scope.showcontent=false
-}
+
 $scope.hideloading=function(){
   $scope.showloading=false
 }
+
 $scope.getcontent=function(url){
    contentloading();
- $http.get(url).then(function(data){$scope.showmaskedcontent(data.data)},function(error){$scope.showerror(error)})
+getresult.getdata(url).then(function(data){$scope.showmaskedcontent(data.data)},handleerr)
 }
  $scope.showip=function(){
 $scope.getcontent('/services/util.php?action=getip')
   }
   $scope.resetMask=function(){
-    $scope.contentopts={filemenu:false}
+    $scope.contentopts={filemenu:false,extramenu:true,listmenu:false}
     $scope.hideloading();
     $scope.tfullscreen=$scope.fullscreen=false;
     $scope.contenttemp=$scope.contentstyle=$scope.sb233content=""
   }
   $scope.showfile=function(){$scope.textmenu=false;$scope.filemenu=true}
   $scope.showtext=function(){$scope.textmenu=true;$scope.filemenu=false}
-$scope.hidemask=function(){if($scope.doreload)location.reload();else {$scope.mask=false;
+$scope.hidemask=function(){if($scope.doreload){ $route.reload();$scope.doreload=false}else {$scope.mask=false;
 $scope.resetMask();
 $scope.$applyAsync()}}
 $scope.showtemplate=function(tmp,msg){$scope.hideloading();$scope.showtmp=true; $scope.showmaskedcontent(msg);if(tmp)$scope.contenttemp=tmp}
@@ -569,7 +665,7 @@ $scope.edittext=function(name){
   contentloading();  
   $scope.textname=name;
   if(name)
-  getresult.postjson(sb233config.TEXTJSONPATH,{'update':name}).then(function(data){$scope.edittextdata=data[sb233ids.data];$scope.showtemplate('editorbox.html');$scope.tfullscreen=true},function(error){$scope.showerror(error)})
+  getresult.postjson(sb233config.TEXTJSONPATH,{'update':name}).then(function(data){$scope.edittextdata=data[sb233ids.data];$scope.showtemplate('editorbox.html');$scope.tfullscreen=true},handleerr);
   else {$scope.edittextdata='';$scope.showtemplate('editorbox.html');$scope.tfullscreen=true}
 }
  $scope.delenabled=false;
@@ -582,14 +678,18 @@ $scope.edittext=function(name){
  
 <style>
 .gridcontainer{min-height: 100%;width: 100%;position: absolute;top:0;left:0;box-sizing:border-box;}
+.listcontainer{border-bottom:  1px solid; margin-bottom: 5px;padding: 5px}
 span.sbhl {background: rgba(255,255,255,0.6);color:#000;font-weight: bold}
 #searchbar{position: fixed;z-index:3;top:0;left:0;width: 100%}
 #searchinputwrapper{background: rgba(19,23,32,0.6);padding: 5px; margin: 5px 0 5px 55px}
-#searchinput{border-radius: 15px;border: 1px solid;height: 20px;overflow: hidden;position: relative}
-#searchinput input{width: 100%;height: 20px;padding: 0px 25px 0 5px}
+#searchinput{border-radius: 15px;border: 1px solid;overflow: hidden;position: relative}
+#searchinput input{width: 100%;height: 25px;padding: 0px 25px 0 5px}
 #filegrid{padding-left: 70px;padding-top: 5px}
 #textgrid{padding-top: 20px}
-
+#copyright{
+ position:absolute;bottom:2px;font-family:sans-serif;font-size:10px;cursor:pointer;color:#fff
+}
+#textgrid #copyright{left:60px;}
 .margintop{padding-top: 30px}
 
   .error {color:red;font-weight: bold}
@@ -696,7 +796,7 @@ div[class^='fileholder bg-']{cursor: pointer;position: relative; }
   -moz-box-shadow: 0px 2px  0 rgba(0,0,0,0.7);
   box-shadow: 0px 2px  0 rgba(0,0,0,0.7);
 }
-.loading{background:url('images/loading.gif') no-repeat center / 10%;width:100%;height:100%;position: absolute;}
+.loading{background:url('images/loading.gif') no-repeat center / 10%;width:100%;height:100%;position: absolute;z-index: 233333}
 
 
 .fileholder p.ext{
@@ -747,36 +847,63 @@ opacity: 1;
 #topbar,#menubar {background: #131720 ;box-shadow: 0 10px 16px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19) !important}
 
 #contentbar{    padding: 5px;  border-bottom:1px solid;     }
-#uploadgrid .action, #contentbar span, #searchbar .action {cursor:pointer ;margin:0 5px 0 5px;font-size:15px;font-family: monospace; }
-#searchbar .action{position: absolute;right:10px;top:12px;}
-#uploadgrid .action:hover, #contentbar span:hover,#searchbar .action:hover{font-weight: bold}
+#uploadgrid{min-height: 40px}
+#uploadgrid .action, #contentbar span, #searchbar .action,#checklist .action {cursor:pointer ;margin:0 5px 0 5px;font-size:15px;font-family: monospace; }
+#searchbar .action{position: absolute;right:10px;top:17px;}
+#uploadgrid .action:hover, #contentbar span:hover,#searchbar .action:hover,#checklist .action:hover{font-weight: bold}
 #uploadgrid .action.disabled:hover,#contentbar span.disabled:hover{cursor: not-allowed}
 
-#uploadgrid .action{text-transform: uppercase;}
-#uploadgrid .action:after{content:'\00a0]'}
-#uploadgrid .action:before{content:'[\00a0'}
+#uploadgrid .action,#checklist .action{text-transform: uppercase;}
+#uploadgrid .action:after,#checklist .action:after{content:'\00a0]'}
+#uploadgrid .action:before,#checklist .action:before{content:'[\00a0'}
 #uploadgrid div.flinput:first-child .action.del{display: none}
 #contentbar span:not(:last-child):after{content: '\00a0|'}
 #uploadgrid .action.disabled:hover,#contentbar span.disabled:hover,#uploadgrid .action:after,#uploadgrid .action:before,#contentbar span:hover:after{font-weight:initial;}
-
-
+#contentbar span img.barloading{display: none}
+#contentbar span.bardisabled img{display: inline-block;}
 
 #caption{
 position:absolute;right:10px;top:5px;text-transform: uppercase;    font-family: monospace;    color: #98a1b9
 }
-
 @media only screen and (max-device-width: 736px) 
 {
   #caption{font-size: 10px}
   }
+
+
+#checklist{font-family: monospace;}
+#checklist .itemtext{margin:5px; word-break :break-all; text-decoration: underline;cursor: pointer;}
+
+#checklist .itemtext:hover{font-weight:bold;}
+#checklist .userprocessed{text-decoration: line-through;cursor: default;color:#8e064b;}
+#checklist .userprocessed:hover{font-weight:initial;}
+
+#submitresult{padding: 5px}
 </style>  
 
   </head>
 	<body ng-app="sb233">  
 
-    <script type="text/ng-template" id="pager.html" >
+	
+  <div id='sidemenu' ng-controller='menubar'>
 
-      <div id='topbar' stop-event='click'  >
+
+  <div id='menubar' ><ul ng-show="textmenu"><li onclick='location.href="#/"'>file</li><li ng-click='edittext()'>new</li><li ng-class='{"inactive":!delenabled}' ng-click='deltexts()'><div class='tip' ng-show='delenabled'>{{tip}}</div>del</li></ul><ul ng-show="utilmenu"><li ng-click='showutil()'>back</li><li ng-click='showip()'>ip</li><li ng-click='showusers()'>users</li></ul><ul ng-show="filemenu"><li onclick='location.href="#/texts"'>text</li><li  ng-click='uploadfiles()'>new</li><li  ng-class='{"inactive":!delenabled}' ng-click='delfiles()'><div class='tip' ng-show='delenabled'>{{tip}}</div>del</li></ul></div>
+    <div id='mask'  ng-show="mask"  ng-click='hidemask()'> 
+      
+   <div ng-show='showloading' class='loading' stop-event='click'>&nbsp;</div>
+    
+  <div ng-show='showmaskedcontent'  stop-event='click' class='content {{fullscreen?"":"min"}} {{contentstyle}} '><div id='contentbar'   stop-event='click' ng-hide='tfullscreen&&fullscreen'><span ng-click='fullscreen=!fullscreen'>{{fullscreen?"Resume":"Maximize"}}</span><span ng-show='contentopts.filemenu&&contentopts.extramenu' ng-click='addFile()'>Add</span><span ng-show='contentopts.filemenu&&contentopts.extramenu' ng-click='submitFiles()' ng-class='{"disabled":!cansubmit}'>Upload<img class='barloading' src='images/loading.gif' width='20px' style='inline-block' /></span><span ng-show='contentopts.listmenu&&contentopts.extramenu&&!contentopts.detailedit' ng-click='startedit()'>Add</span><span ng-show='contentopts.listmenu&&contentopts.extramenu' ng-click='apply()' ng-class='{"disabled":!cansubmit}'>Apply<img class='barloading' src='images/loading.gif' width='20px' style='inline-block' /></span><span ng-show='contentopts.listmenu&&contentopts.detailedit' ng-click='canceledit()'>Back</span><span ng-click='hidemask()'>Close</span></div><div style='padding:5px;font-size:  7vh'>{{sb233content}}</div><ng-include src='contenttemp' ng-show='showtmp'></ng-include></div></div></div>
+<ng-view />
+
+	</body>
+
+  <script type="text/ng-template" id="fileinput.html">
+<div class="flinput"><input type="file" sb-change="flchange(fname)" name="file[]" /><span class="action del" ng-click="delfile($event)">del</span></div>
+</script>
+    <script type="text/ng-template" id="pager.html" >
+<div id='copyright' ng-click='showcopyright()'>&copy; 2017 by dukedhx</div>
+      <div id='topbar' stop-event='click' ><div style='position:relative'><div ng-show='showuser' style='position:absolute;border-bottom:1px solid #37415B;width:105px;word-break:break-all;bottom:10px;background:rgba(0,0,0,0.7);left:-10px;text-align:center;padding-bottom:4px'>Logged in as:<br/>{{user||'Guest'}}</div></div><img src='images/images.jpg'  width='20px'  ng-click='showuser=!showuser' style='cursor:pointer' />
 <input ng-model='sb233opts.selectedall'  ng-change='selectall(sb233opts.selectedall)'   type="checkbox"/>  
     <!-- <a href='javascript:void 0' ng-click='gettexts(1)'>&le;&le;</a> <a href='javascript:void 0'  ng-click='gettexts(cpage-1)'>&le;</a> -->
 
@@ -787,18 +914,18 @@ position:absolute;right:10px;top:5px;text-transform: uppercase;    font-family: 
       </script>
   <script type="text/ng-template" id="caption.html">
   <div id='searchbar' stop-event='click'>
-<a  href='javascript:void 0' ng-click='showutil()'  style='float:left' ><img src='images/magnifier.png'  width='30px' style='padding:10px 0 5px 10px' /></a><div id='searchinputwrapper' ng-show='showsearchinput'><div id='searchinput' ><input ng-model='sb233opts.searchtext' ng-change='getSearchRegex()' /></div><div class='action' ng-click='hideSearchBar()'>| X </div></div></div>
+<img ng-click='showutil()'  style='float:left;margin:10px;cursor:pointer' src='images/magnifier.png'  width='30px' style='padding:10px 0 5px 10px' /><div id='searchinputwrapper' ng-show='showsearchinput'><div id='searchinput' ><input placeholder='Type here to filter items' ng-model='sb233opts.searchtext' ng-change='getSearchRegex()' /></div><div class='action' ng-click='hideSearchBar()'>| X </div></div></div>
 <div id='caption'>{{sb233opts.pp*(sb233opts.cpage-1)+1}} - {{sb233opts.ctotal>sb233opts.pp*sb233opts.cpage?(sb233opts.pp*sb233opts.cpage):sb233opts.ctotal}} of {{sb233opts.ctotal}} | double click to open items</div> 
   <div ng-show='showloading' class='loading'>&nbsp;</div>
 
 </script>
-	
-		 <script type="text/ng-template" id="texts.html">
+  
+     <script type="text/ng-template" id="texts.html">
    
 
    <div ng-click='unselectall()' class='gridcontainer {{showsearchinput?"margintop":""}}' id='textgrid' ng-controller='textgrid'>
     <ng-include src="'caption.html'" ></ng-include>
-<div ng-repeat="result in results|filter:sbsearch" class='textholder {{result.class}}'  ><div class='row'  ng-click='selectaction(result);'  stop-event='click'><div class='time'><div>{{result.time}}</div></div><div class='container'><div class='abstract'><span ng-bind-html='result.abstract|sbhighlight:searchRegex'></span>&nbsp;...</div><div class='ticker'    ng-click='unselectaction(result)'  stop-event='click'>&check;</div></div>
+<div ng-repeat="result in results|filter:sbsearch" class='textholder {{result.class}}'  ><div class='row'  ng-click='selectaction(result);'  stop-event='click'><div class='time'><div>{{result.time}}</div></div><div class='container'><div class='abstract'><span ng-bind-html='result.id|decodeuri|sbhighlight:searchRegex'></span>&nbsp;...</div><div class='ticker'    ng-click='unselectaction(result)'  stop-event='click'>&check;</div></div>
     </div></div>
     <ng-include src="'pager.html'" />
     </div>
@@ -811,8 +938,8 @@ position:absolute;right:10px;top:5px;text-transform: uppercase;    font-family: 
     <div   ng-click='unselectall()' class='gridcontainer' id='filegrid' ng-controller='filegrid'>
     <ng-include src="'caption.html'" ></ng-include>
 
-<div ng-repeat="result in results|filter:sbsearch" class='fileholder bg-{{fileholderclassnospos|randfhcls}} {{result.class}}' ng-click='selectaction(result)'  stop-event='click' ><div class='righttopbgdiv'></div><div class='exthlder'><p class='ext' ng-bind-html='result.ext|sbhighlight:searchRegex'></p><div class='tick'  ng-click='unselectaction(result)'  stop-event='click'>&check;</div></div><div class='divider'></div><p>{{result.dtime}}</p><p>{{result.dsize}}</p>
-       <p title='{{result.name}}' ><span class='filename'><span class='short' ng-bind-html='result.short|sbhighlight:searchRegex'></span><span class='fullname' ng-bind-html='result.name|sbhighlight:searchRegex'></span></span></p>
+<div ng-repeat="result in results|filter:sbsearch" class='fileholder bg-{{fileholderclassnospos|randfhcls}} {{result.class}}' ng-click='selectaction(result)'  stop-event='click' ><div class='righttopbgdiv'></div><div class='exthlder'><p class='ext' ng-bind-html='result.ext|getext|sbhighlight:searchRegex'></p><div class='tick'  ng-click='unselectaction(result)'  stop-event='click'>&check;</div></div><div class='divider'></div><p>{{(result.time||'').substring(2,16)}}</p><p>{{result.size|getsize}}</p>
+       <p title='{{result.name}}' ><span class='filename'><span class='short' ng-bind-html='result.name|shortform|sbhighlight:searchRegex'></span><span class='fullname' ng-bind-html='result.name|sbhighlight:searchRegex'></span></span></p>
     </div>
     <ng-include src="'pager.html'" />
 
@@ -824,23 +951,21 @@ position:absolute;right:10px;top:5px;text-transform: uppercase;    font-family: 
       </script>
 
       <script type="text/ng-template" id="uploader.html">
-      <div ng-controller='uploadgrid'>
+      <div ng-controller='uploadgrid'><div class='listcontainer'>
       <form target="sbuploadtarget" enctype='multipart/form-data' method="post" action="{{filepath}}"  id='uploadgrid'><input value='sb233' style='display:none' name='hasfile' />
       <sb-uploader></sb-uploader>
-      </form>
-<iframe iframe-onload="uploadDone()" name='sbuploadtarget' style='border:none;overflow:scroll'/>
+      </form></div>
+<iframe iframe-onload="uploadDone()" ng-show='uploaded' ng width='100%' name='sbuploadtarget' height='50px' style='border:none;overflow:scroll'/>
 </div>
         </script>
-	
-  <div id='sidemenu' ng-controller='menubar'>
 
+          <script type="text/ng-template" id="checklists.html">
+     <div ng-controller='checklist' id='checklist'><div class='listcontainer'>
+<div ng-repeat="key in rstkeys" ng-hide='listeditopts.detailedit'><span>{{listeditopts.checkboxname}}</span><input  type='checkbox' ng-checked="results[key]"  onclick="return false;" style='cursor:default' /><span class="action del" ng-hide='listeditopts.disablebatch' ng-click="processitem(key)">{{batchitems.indexOf(key)>-1?'undo':listeditopts.processname}}</span><span class="itemtext {{batchitems.indexOf(key)>-1?listeditopts.processedcls:''}}" ng-click='startedit(key)' title='{{key}}'>{{key|shortform}}</span></div>
+<div id='detailedit' ng-show='listeditopts.detailedit'>
 
-  <div id='menubar' ><ul ng-show="textmenu"><li onclick='location.href="#/"'>file</li><li ng-click='edittext()'>new</li><li ng-class='{"inactive":!delenabled}' ng-click='deltexts()'><div class='tip' ng-show='delenabled'>{{tip}}</div>del</li></ul><ul ng-show="utilmenu"><li ng-click='showutil()'>back</li><li ng-click='showip()'>ip</li><li>stats</li></ul><ul ng-show="filemenu"><li onclick='location.href="#/texts"'>text</li><li  ng-click='uploadfiles()'>new</li><li  ng-class='{"inactive":!delenabled}' ng-click='delfiles()'><div class='tip' ng-show='delenabled'>{{tip}}</div>del</li></ul></div>
-    <div id='mask'  ng-show="mask"  ng-click='hidemask()'> 
-      
-   <div ng-show='showloading' class='loading'  stop-event='click'>&nbsp;</div>
-    
-  <div ng-show='showmaskedcontent'  stop-event='click' class='content {{fullscreen?"":"min"}} {{contentstyle}} '><div id='contentbar'   stop-event='click' ng-hide='tfullscreen&&fullscreen'><span ng-click='fullscreen=!fullscreen'>{{fullscreen?"Resume":"Maximize"}}</span><span ng-show='contentopts.filemenu' ng-click='addFile()'>Add</span><span ng-show='contentopts.filemenu' ng-click='submitFiles()' ng-class='{"disabled":!cansubmit}'>Upload</span><span ng-click='hidemask()'>Close</span></div><div style='padding:5px;font-size:  7vh'>{{sb233content}}</div><ng-include src='contenttemp' ng-show='showtmp'></ng-include></div></div></div>
-<ng-view />
-	</body>
+<div>{{listeditopts.inputname}}: <input ng-model="listeditopts.textvalue" type='text' ng-disabled='listeditopts.inputtextdisabled&&listeditopts.editing'  /></div><div ng-show='!!listeditopts.inputextraname'>{{listeditopts.inputextraname}}: <input ng-model="listeditopts.extratextvalue" type='text' ng-disabled='listeditopts.inputextratextdisabled' /></div><div>{{listeditopts.checkboxname}} <input ng-model="listeditopts.checkboxvalue" type='checkbox' /></div></div></div>
+<div id='submitresult'>{{submitresult}}</div></div>
+        </script>
+        
 	</html>

@@ -1,7 +1,13 @@
 <?php
 error_reporting(E_ERROR);
+require_once ('../includes/constants.php');
+
+if($doauth)
+require_once ('../includes/user.php');
 require_once ('../includes/rst.php');
 require_once ('../includes/io.php');
+
+
 
 class fljsonifier extends jsonifier{
 protected function jsonify($item)
@@ -16,8 +22,6 @@ echo <<<EOT
 EOT;
 }
 }
-
-
 
 if(!empty($_POST[$uphasfile]))
 {

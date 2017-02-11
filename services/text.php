@@ -1,8 +1,17 @@
 <?php
 error_reporting(E_ERROR);
+require_once ('../includes/constants.php');
+
+if($doauth)
+require_once ('../includes/user.php');
+
 //require_once ('../includes/dbc.php');
+
+
 require_once ('../includes/rst.php');
 require_once ('../includes/io.php');
+
+
 class txremover extends bprocrst{
 	private $dbc;
 	public function __construct( $arrstr,$dbc){
@@ -102,7 +111,7 @@ try{
 $savtxtname=$textpath.($_POST[$updparam].substr(0,200)).' '.time();
 if(!empty($_POST[$updel]))
 {
-unlink($textpath.$_POST[$updel]);
+delfile($textpath.$_POST[$updel]);
 	}
 $writer=new writer($savtxtname);
 $writer->writecontent($_POST[$uptext]);

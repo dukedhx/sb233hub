@@ -1,6 +1,6 @@
 <?php 
 
-require_once ('constants.php');
+require_once ('rst.php');
 
 class writer{
 private $filename, $size,$handle;
@@ -10,7 +10,7 @@ $this->filename=$fn;
   
 	public function del()
 	{
-delfile($this->filename);
+return delfile($this->filename);
 	}
 
 public function getsize(){
@@ -30,8 +30,8 @@ public function readall()
 	return file_get_contents($this->filename);
 }
 public function writefile(){
-global $buffer;
-
+global $buffer,$failure,$success;
+try{
 $this->handle = $this->getfh($this->filename);
 
 $out=fopen('php://output', 'w');
@@ -41,6 +41,8 @@ $contents = fread($this->handle, $buffer);
 $written=fwrite($out, $contents);
 }while(($this->size=$this->size-$written)>0);
 $this->close($out);
+return $success;
+}catch(Exception $ex){return $failure;}
 }
 
 public function peek($peek)
@@ -51,8 +53,12 @@ return fread($this->handle, $peek);
 }
 
 public function writecontent(&$contents){
+	global $failure;
+	try{
 	$this->handle = $this->getfh($this->filename, true);
-fwrite($this->handle, $contents);
+	return fwrite($this->handle, $contents);
+}catch(Exception $ex){return $failure;}
+
 }
 function __destruct() {
 	$this->close($this->handle);
@@ -72,10 +78,19 @@ $this->path=$path;
 }
 
 function delfile($filename)
-{global $nonexist,$failure,$success;$answer=$success;
+{
+global $failure,$nonexist,$success;
+	$answer=$success;
+	try{
 		if(file_exists($filename)){if(!unlink($filename))$answer=$failure;}else $answer=$nonexist;
-		return $answer;}
+		return $answer;}catch(Exception $ex){return $failure;}
+	}
 
-
+ function overwrite($patha,$pathb){
+global $failure,$nonexist,$success;
+	
+	try{
+return delfile($pathb)==$success?rename($patha, $pathb):$failure;
+}catch(Exception $ex){return $failure;}}
 
 ?>
